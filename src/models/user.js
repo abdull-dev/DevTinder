@@ -93,7 +93,7 @@ const userSchema = new mongoose.Schema({
         default: 'https://via.placeholder.com/150',
         validate: {
             validator: function (value) {
-                return validator.isURL(value);
+                return validator.isURL(value) || value.startsWith('/uploads/');
             },
             message: "Invalid photo URL or path"
         }

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/database");
@@ -24,6 +25,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+const uploadsDir = process.env.VERCEL === "1" ? "/tmp" : path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsDir));
 
 const PORT = process.env.PORT || 3001;
 

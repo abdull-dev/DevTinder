@@ -3,7 +3,6 @@ const profileRouter = express.Router();
 const { userAuth } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
 const { isProfileUpdateAllowed } = require("../utils/validation");
-const { uploadToCloudinary } = require("../config/cloudinary");
 
 profileRouter.get('/profile/view', userAuth, async (req, res) => {
     try {
@@ -45,10 +44,8 @@ profileRouter.post('/profile/photo', userAuth, upload.single('photo'), async (re
             return res.status(400).json({ success: false, message: "No image file provided" });
         }
 
-        const photoURL = await uploadToCloudinary(req.file.buffer, "devtinder/avatars");
-
         const loggedInUser = req.user;
-        loggedInUser.photoURL = photoURL;
+        loggedInUser.photoURL = `/uploads/${req.file.filename}`;
         await loggedInUser.save();
 
         res.json({
@@ -68,10 +65,8 @@ profileRouter.post('/profile/gallery', userAuth, upload.array('photos', 6), asyn
             return res.status(400).json({ success: false, message: "No image files provided" });
         }
 
-        const uploadPromises = req.files.map((f) => uploadToCloudinary(f.buffer, "devtinder/gallery"));
-        const newPhotos = await Promise.all(uploadPromises);
-
         const loggedInUser = req.user;
+        const newPhotos = req.files.map((f) => `/uploads/${f.filename}`);
         const combined = [...loggedInUser.gallery, ...newPhotos];
 
         if (combined.length > 6) {
