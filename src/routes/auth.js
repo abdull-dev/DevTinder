@@ -3,21 +3,26 @@ const bcrypt = require("bcrypt");
 const authRouter = express.Router();
 const userModel = require("../models/user");
 const { upload } = require("../middlewares/upload");
+const { uploadToCloudinary } = require("../config/cloudinary");
 
 
 authRouter.post("/auth/signup", upload.single('photo'), async (req, res) => {
-    const { firstName, lastName, emailId, password, age, gender, Description, interests, location } = req.body;
-    if (!password) {
-        return res.status(400).send("Password is required");
-    }
-    const passwordHash = await bcrypt.hash(password, 10);
-    const photoURL = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const user = new userModel({ firstName, lastName, emailId, password: passwordHash, age, gender, photoURL, Description, interests, location });
-    user.save().then(() => {
+    try {
+        const { firstName, lastName, emailId, password, age, gender, Description, interests, location } = req.body;
+        if (!password) {
+            return res.status(400).send("Password is required");
+        }
+        const passwordHash = await bcrypt.hash(password, 10);
+        let photoURL;
+        if (req.file) {
+            photoURL = await uploadToCloudinary(req.file.buffer, "devtinder/avatars");
+        }
+        const user = new userModel({ firstName, lastName, emailId, password: passwordHash, age, gender, photoURL, Description, interests, location });
+        await user.save();
         res.send('User created successfully');
-    }).catch((err) => {
-        res.send(err);
-    });
+    } catch (err) {
+        res.status(400).send("ERROR: " + err.message);
+    }
 });
 
 authRouter.post("/auth/signin", async (req, res) => {

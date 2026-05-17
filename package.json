@@ -17,6 +17,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^9.5.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
