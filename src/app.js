@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/database");
 const { authRouter } = require("./routes/auth");
@@ -9,6 +10,10 @@ const { requestsRouter } = require("./routes/requests");
 const { settingsRouter } = require("./routes/settings");
 const { userRouter } = require("./routes/user");
 const app = express();
+app.use(cors({
+    origin: ["http://localhost:3000", "https://dev-tinder-sage.vercel.app"],
+    credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
