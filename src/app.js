@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -14,17 +15,32 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const PORT = process.env.PORT || 3001;
 
+// Connect DB on first request (for serverless)
+let isConnected = false;
+app.use(async (req, res, next) => {
+    if (!isConnected) {
+        await connectDB();
+        isConnected = true;
+    }
+    next();
+});
+
 app.use("/", authRouter);
 app.use("/", profileRouter);
 app.use("/", requestsRouter);
 app.use("/", settingsRouter);
 app.use("/", userRouter);
 
-connectDB().then(() => {
-    console.log('Database connected successfully');
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT} http://localhost:${PORT}`);
+// Start server only when running locally (not on Vercel)
+if (process.env.VERCEL !== "1") {
+    connectDB().then(() => {
+        console.log('Database connected successfully');
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT} http://localhost:${PORT}`);
+        });
+    }).catch((err) => {
+        console.log(err);
     });
-}).catch((err) => {
-    console.log(err);
-});
+}
+
+module.exports = app;

@@ -2,8 +2,12 @@ const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
 
+const uploadDir = process.env.VERCEL === "1"
+  ? "/tmp"
+  : path.join(__dirname, "../uploads");
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, "../uploads"),
+  destination: uploadDir,
   filename: (req, file, cb) => {
     const uniqueName = crypto.randomBytes(16).toString("hex") + path.extname(file.originalname);
     cb(null, uniqueName);
