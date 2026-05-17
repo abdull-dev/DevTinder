@@ -34,7 +34,11 @@ authRouter.post("/auth/signin", async (req, res) => {
         const isPasswordValid = await user.validatePassword(password);
         if (isPasswordValid) {
             const token = await user.getJWT();
-            res.cookie('token', token);
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+            });
             res.send('User Logedin Successfully')
         }
         else {
@@ -98,7 +102,11 @@ authRouter.post("/auth/google", async (req, res) => {
         }
 
         const token = await user.getJWT();
-        res.cookie("token", token);
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+        });
         res.json({ success: true, message: "Google sign-in successful" });
     } catch (err) {
         res.status(400).json({ message: "Google sign-in failed: " + err.message });
@@ -106,7 +114,12 @@ authRouter.post("/auth/google", async (req, res) => {
 });
 
 authRouter.post("/auth/logout", async (req, res) => {
-    res.cookie("token", null, { expires: new Date(Date.now()) });
+    res.cookie("token", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+    });
     res.send("Logout Successful");
 })
 
