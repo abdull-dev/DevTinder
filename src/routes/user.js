@@ -31,9 +31,23 @@ userRouter.get("/user/connections/sent", userAuth, async (req, res) => {
 userRouter.get("/user/connections/matches", userAuth, async (req, res) => {
     try {
         const loggedinUserId = req.user;
-        const users = await ConnectionRequest.find({ $or: [{ toUserId: loggedinUserId }, { fromUserId: loggedinUserId }], status: "accepted" }).populate("fromUserId", "firstName lastName");
+        const populateFields = "firstName lastName photoURL age gender Description interests location jobTitle company languages isPremium";
+        const connections = await ConnectionRequest.find({
+            $or: [{ toUserId: loggedinUserId }, { fromUserId: loggedinUserId }],
+            status: "accepted",
+        })
+            .populate("fromUserId", populateFields)
+            .populate("toUserId", populateFields);
 
-        return res.json({ success: true, message: "Sent connections", users });
+        // Return the *other* user from each connection (not yourself)
+        const loggedInId = loggedinUserId._id?.toString() || loggedinUserId.toString();
+        const users = connections.map((conn) => {
+            const from = conn.fromUserId;
+            const to = conn.toUserId;
+            return from._id.toString() === loggedInId ? to : from;
+        });
+
+        return res.json({ success: true, message: "Matched connections", users });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ success: false, message: "Internal Server Error" });

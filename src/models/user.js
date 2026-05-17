@@ -129,6 +129,19 @@ const userSchema = new mongoose.Schema({
         maxlength: 50,
         trim: true
     },
+    isPremium: {
+        type: Boolean,
+        default: false,
+    },
+    premiumPlan: {
+        type: String,
+        enum: ["monthly", "yearly", null],
+        default: null,
+    },
+    premiumExpiresAt: {
+        type: Date,
+        default: null,
+    },
 },
     {
         timestamps: true
