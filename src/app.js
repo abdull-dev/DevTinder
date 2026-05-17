@@ -25,7 +25,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+const uploadsDir = process.env.VERCEL === "1" ? "/tmp" : path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsDir));
 
 const PORT = process.env.PORT || 3001;
 
