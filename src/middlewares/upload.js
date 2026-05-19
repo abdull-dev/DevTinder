@@ -2,9 +2,7 @@ const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
 
-const uploadDir = process.env.VERCEL === "1"
-  ? "/tmp"
-  : path.join(__dirname, "../uploads");
+const uploadDir = path.join(__dirname, "../uploads");
 
 const storage = multer.diskStorage({
   destination: uploadDir,

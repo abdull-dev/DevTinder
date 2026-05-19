@@ -1,6 +1,7 @@
 const express = require("express");
 const { userAuth } = require("../middlewares/auth");
 const { ConnectionRequest } = require("../models/connectionRequests");
+const { getIO, getOnlineUsers } = require("../utils/sockets");
 const requestsRouter = express.Router();
 
 requestsRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
@@ -42,6 +43,25 @@ requestsRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res
         });
 
         const data = await connectionRequest.save();
+
+        // Send real-time notification to receiver if online
+        if (status === "interested") {
+            const io = getIO();
+            const onlineUsers = getOnlineUsers();
+            const receiverSocketId = onlineUsers.get(toUserId);
+            if (io && receiverSocketId) {
+                io.to(receiverSocketId).emit("notification", {
+                    type: "connection_request",
+                    from: {
+                        _id: req.user._id,
+                        firstName: req.user.firstName,
+                        lastName: req.user.lastName,
+                        photoURL: req.user.photoURL,
+                    },
+                    createdAt: data.createdAt,
+                });
+            }
+        }
 
         res.json({
             message: "Connection request sent successfully!",

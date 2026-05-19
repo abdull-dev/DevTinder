@@ -6,13 +6,13 @@ const { upload } = require("../middlewares/upload");
 
 
 authRouter.post("/auth/signup", upload.single('photo'), async (req, res) => {
-    const { firstName, lastName, emailId, password, age, gender, Description, interests, location } = req.body;
+    const { firstName, lastName, emailId, password, age, gender, Description, interests, languages, country, city } = req.body;
     if (!password) {
         return res.status(400).send("Password is required");
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const photoURL = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const user = new userModel({ firstName, lastName, emailId, password: passwordHash, age, gender, photoURL, Description, interests, location });
+    const user = new userModel({ firstName, lastName, emailId, password: passwordHash, age, gender, photoURL, Description, interests, languages, country, city, profileComplete: true });
     user.save().then(() => {
         res.send('User created successfully');
     }).catch((err) => {

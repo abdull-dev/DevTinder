@@ -17,13 +17,16 @@ const messageSchema = new mongoose.Schema(
             required: true,
             maxlength: 2000,
         },
+        read: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,
     }
 );
 
-// Index for efficient query of conversation between two users
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Message", messageSchema);

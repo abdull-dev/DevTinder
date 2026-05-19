@@ -3,8 +3,8 @@ const validator = require("validator");
 const isProfileUpdateAllowed = (req) => {
     const allowedUpdates = new Set([
         "firstName", "lastName", "age", "gender", "photoURL",
-        "Description", "interests", "location", "jobTitle",
-        "languages", "company", "gallery"
+        "Description", "interests", "country", "city", "jobTitle",
+        "languages", "company", "gallery", "profileComplete"
     ]);
     const isUpdateAllowed = Object.keys(req.body).every((field) =>
         allowedUpdates.has(field)

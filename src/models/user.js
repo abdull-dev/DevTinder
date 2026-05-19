@@ -62,10 +62,15 @@ const userSchema = new mongoose.Schema({
         maxlength: 20,
         default: []
     },
-    location: {
+    country: {
         type: String,
-        maxlength: 100,
-        default: 'location will show here'
+        maxlength: 60,
+        default: '',
+    },
+    city: {
+        type: String,
+        maxlength: 60,
+        default: '',
     },
     createdAt: {
         type: Date,
@@ -128,6 +133,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         maxlength: 50,
         trim: true
+    },
+    profileComplete: {
+        type: Boolean,
+        default: false,
     },
     isPremium: {
         type: Boolean,

@@ -3,11 +3,12 @@ const userRouter = express.Router();
 const { userAuth } = require("../middlewares/auth");
 const { ConnectionRequest } = require("../models/connectionRequests");
 const User = require("../models/user");
+const { getIO, getOnlineUsers } = require("../utils/sockets");
 
 userRouter.get("/user/connections/recieved", userAuth, async (req, res) => {
     try {
         const loggedinUserId = req.user;
-        const users = await ConnectionRequest.find({ toUserId: loggedinUserId, status: "interested" }).populate("fromUserId", "firstName lastName Description photoURL age gender interests location jobTitle company languages");;
+        const users = await ConnectionRequest.find({ toUserId: loggedinUserId, status: "interested" }).populate("fromUserId", "firstName lastName Description photoURL age gender interests country city jobTitle company languages");;
 
         return res.json({ success: true, message: "Recieved connections", users });
     } catch (error) {
@@ -19,7 +20,7 @@ userRouter.get("/user/connections/recieved", userAuth, async (req, res) => {
 userRouter.get("/user/connections/sent", userAuth, async (req, res) => {
     try {
         const loggedinUserId = req.user;
-        const users = await ConnectionRequest.find({ fromUserId: loggedinUserId, status: "interested" }).populate("toUserId", "firstName lastName Description photoURL age gender interests location jobTitle company languages");
+        const users = await ConnectionRequest.find({ fromUserId: loggedinUserId, status: "interested" }).populate("toUserId", "firstName lastName Description photoURL age gender interests country city jobTitle company languages");
 
         return res.json({ success: true, message: "Sent connections", users });
     } catch (error) {
@@ -31,7 +32,7 @@ userRouter.get("/user/connections/sent", userAuth, async (req, res) => {
 userRouter.get("/user/connections/matches", userAuth, async (req, res) => {
     try {
         const loggedinUserId = req.user;
-        const populateFields = "firstName lastName photoURL age gender Description interests location jobTitle company languages isPremium";
+        const populateFields = "firstName lastName photoURL age gender Description interests country city jobTitle company languages isPremium";
         const connections = await ConnectionRequest.find({
             $or: [{ toUserId: loggedinUserId }, { fromUserId: loggedinUserId }],
             status: "accepted",
@@ -41,11 +42,13 @@ userRouter.get("/user/connections/matches", userAuth, async (req, res) => {
 
         // Return the *other* user from each connection (not yourself)
         const loggedInId = loggedinUserId._id?.toString() || loggedinUserId.toString();
-        const users = connections.map((conn) => {
-            const from = conn.fromUserId;
-            const to = conn.toUserId;
-            return from._id.toString() === loggedInId ? to : from;
-        });
+        const users = connections
+            .filter((conn) => conn.fromUserId && conn.toUserId)
+            .map((conn) => {
+                const from = conn.fromUserId;
+                const to = conn.toUserId;
+                return from._id.toString() === loggedInId ? to : from;
+            });
 
         return res.json({ success: true, message: "Matched connections", users });
     } catch (error) {
@@ -81,6 +84,109 @@ userRouter.delete("/request/cancel/:requestId", userAuth, async (req, res) => {
     }
 });
 
+// DELETE /connection/:userId - Unmatch/delete connection with a user
+userRouter.delete("/connection/:userId", userAuth, async (req, res) => {
+    try {
+        const loggedInId = req.user._id;
+        const otherUserId = req.params.userId;
+        const Message = require("../models/message");
+
+        const connection = await ConnectionRequest.findOneAndDelete({
+            $or: [
+                { fromUserId: loggedInId, toUserId: otherUserId },
+                { fromUserId: otherUserId, toUserId: loggedInId },
+            ],
+        });
+
+        if (!connection) {
+            return res.status(404).json({ message: "No connection found with this user" });
+        }
+
+        // Delete all messages between the two users
+        await Message.deleteMany({
+            $or: [
+                { senderId: loggedInId, receiverId: otherUserId },
+                { senderId: otherUserId, receiverId: loggedInId },
+            ],
+        });
+
+        // Notify the other user in real-time
+        const io = getIO();
+        const onlineUsers = getOnlineUsers();
+        const otherSocketId = onlineUsers.get(otherUserId);
+        if (io && otherSocketId) {
+            io.to(otherSocketId).emit("unmatched", {
+                userId: loggedInId.toString(),
+            });
+        }
+
+        res.json({ message: "Connection removed successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to remove connection: " + err.message });
+    }
+});
+
+// GET /user/search - Search users by name, interests, location, jobTitle
+userRouter.get("/user/search", userAuth, async (req, res) => {
+    try {
+        const q = req.query.q;
+        if (!q || q.trim().length === 0) {
+            return res.json({ users: [] });
+        }
+
+        const regex = new RegExp(q.trim(), "i");
+        const loggedInId = req.user._id;
+
+        const users = await User.find({
+            _id: { $ne: loggedInId },
+            $or: [
+                { firstName: regex },
+                { lastName: regex },
+                { jobTitle: regex },
+                { country: regex },
+                { city: regex },
+                { interests: regex },
+                { Description: regex },
+            ],
+        })
+            .select("firstName lastName photoURL age gender Description interests country city jobTitle isPremium")
+            .limit(20)
+            .lean();
+
+        res.json({ users });
+    } catch (err) {
+        res.status(500).json({ message: "Search failed: " + err.message });
+    }
+});
+
+// GET /user/:userId - View someone's profile
+userRouter.get("/user/:userId", userAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId)
+            .select("firstName lastName photoURL age gender Description interests country city jobTitle company languages gallery isPremium createdAt");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check connection status between logged-in user and this user
+        const loggedInId = req.user._id;
+        const connection = await ConnectionRequest.findOne({
+            $or: [
+                { fromUserId: loggedInId, toUserId: user._id },
+                { fromUserId: user._id, toUserId: loggedInId },
+            ],
+        });
+
+        res.json({
+            user,
+            connectionStatus: connection ? connection.status : "none",
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to fetch user: " + err.message });
+    }
+});
+
 userRouter.get("/feed", userAuth, async (req, res) => {
     try {
         let page = Number.parseInt(req.query.page) || 1;
@@ -108,7 +214,7 @@ userRouter.get("/feed", userAuth, async (req, res) => {
         });
         const feedUsers = await User.find({
             _id: { $nin: Array.from(hiddenUsers) }
-        }).select("firstName lastName photoURL age gender Description interests location jobTitle company languages").skip(skip).limit(limit);
+        }).select("firstName lastName photoURL age gender Description interests country city jobTitle company languages").skip(skip).limit(limit);
 
         return res.json({
             success: true,
