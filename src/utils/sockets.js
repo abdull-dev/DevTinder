@@ -21,6 +21,7 @@ const initializeSocket = (httpServer) => {
             origin: [
                 "http://localhost:3000",
                 "https://devtinder-ai.vercel.app",
+                "https://dev-tinder.up.railway.app",
                 "https://devtinder-production-0246.up.railway.app",
             ],
             credentials: true,
