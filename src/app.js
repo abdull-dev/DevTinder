@@ -20,7 +20,11 @@ const httpServer = createServer(app);
 initializeSocket(httpServer);
 
 app.use(cors({
-    origin: ["http://localhost:3000", "https://devtinder-ai.vercel.app"],
+    origin: [
+        "http://localhost:3000",
+        "https://devtinder-ai.vercel.app",
+        "https://devtinder-production-0246.up.railway.app",
+    ],
     credentials: true,
 }));
 app.use(express.json());

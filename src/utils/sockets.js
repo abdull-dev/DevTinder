@@ -18,7 +18,11 @@ const getOnlineUsers = () => onlineUsers;
 const initializeSocket = (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: ["http://localhost:3000", "https://devtinder-ai.vercel.app"],
+            origin: [
+                "http://localhost:3000",
+                "https://devtinder-ai.vercel.app",
+                "https://devtinder-production-0246.up.railway.app",
+            ],
             credentials: true,
         },
     });
